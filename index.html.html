@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhamento de Tarefas - Produto Crédito</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #003641, #00AE9D);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #00AE9D;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #008a7a;
+        }
+        
+        .btn-secondary {
+            background-color: #7DB61C;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #6a9c18;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        th {
+            background-color: #003641;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        select, input[type="date"] {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .status-em-andamento {
+            background-color: #C9D200;
+            color: #003641;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-recebido {
+            background-color: #7DB61C;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-nao-recebido {
+            background-color: #49479D;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-enviado {
+            background-color: #00AE9D;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .nome-produto {
+            font-weight: bold;
+            color: #003641;
+            max-width: 200px;
+        }
+        
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-container label {
+            font-weight: bold;
+            color: #003641;
+        }
+        
+        .filter-container select {
+            width: 150px;
+        }
+        
+        .export-container {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .summary {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .summary-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00AE9D;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card h3 {
+            margin: 0;
+            font-size: 24px;
+            color: #003641;
+        }
+        
+        .summary-card p {
+            margin: 5px 0 0 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Acompanhamento de Tarefas - Produto Crédito</h1>
+        </div>
+        
+        <div class="controls">
+            <div class="filter-container">
+                <label for="statusFilter">Filtrar por Status:</label>
+                <select id="statusFilter">
+                    <option value="">Todos</option>
+                    <option value="Em andamento">Em andamento</option>
+                    <option value="Recebido">Recebido</option>
+                    <option value="Não recebido">Não recebido</option>
+                    <option value="Enviado para sistematização">Enviado para sistematização</option>
+                </select>
+                
+                <label for="responsavelFilter">Filtrar por Responsável:</label>
+                <select id="responsavelFilter">
+                    <option value="">Todos</option>
+                    <option value="Karina e Karinna">Karina e Karinna</option>
+                    <option value="Kamila e Leticia">Kamila e Leticia</option>
+                    <option value="Não se aplica">Não se aplica</option>
+                </select>
+            </div>
+            
+            <div class="export-container">
+                <button class="btn btn-primary" onclick="exportToPDF()">📄 Exportar PDF</button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="tasksTable">
+                <thead>
+                    <tr>
+                        <th>Nome do Produto</th>
+                        <th>Status</th>
+                        <th>Responsáveis</th>
+                        <th>Data Início</th>
+                        <th>Data Fim</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="summary">
+            <h2 style="color: #003641; margin-top: 0;">Resumo</h2>
+            <div class="summary-grid" id="summaryGrid">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sistema de persistência adaptado para ambiente sem localStorage
+        class DataPersistence {
+            constructor() {
+                this.storageKey = 'taskTrackerData';
+                this.data = null;
+                this.init();
+            }
+
+            init() {
+                // Tenta carregar dados salvos
+                this.loadData();
+                
+                // Configura salvamento automático antes de fechar/recarregar a página
+                window.addEventListener('beforeunload', () => {
+                    this.saveData();
+                });
+                
+                // Salva periodicamente (a cada 30 segundos)
+                setInterval(() => {
+                    this.saveData();
+                }, 30000);
+            }
+
+            saveData() {
+                try {
+                    // Simula persistência usando uma variável global que persiste na sessão
+                    if (typeof window.persistentData === 'undefined') {
+                        window.persistentData = {};
+                    }
+                    window.persistentData[this.storageKey] = JSON.stringify(tasks);
+                    
+                    // Tenta usar localStorage se disponível
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.setItem(this.storageKey, JSON.stringify(tasks));
+                    }
+                } catch (error) {
+                    console.log('Dados salvos em memória da sessão');
+                }
+            }
+
+            loadData() {
+                try {
+                    let savedData = null;
+                    
+                    // Tenta carregar do localStorage primeiro
+                    if (typeof localStorage !== 'undefined') {
+                        savedData = localStorage.getItem(this.storageKey);
+                    }
+                    
+                    // Se não encontrou no localStorage, tenta a variável global
+                    if (!savedData && typeof window.persistentData !== 'undefined') {
+                        savedData = window.persistentData[this.storageKey];
+                    }
+                    
+                    if (savedData) {
+                        this.data = JSON.parse(savedData);
+                        return this.data;
+                    }
+                } catch (error) {
+                    console.log('Carregando dados padrão');
+                }
+                
+                return null;
+            }
+
+            getData() {
+                return this.data;
+            }
+        }
+
+        // Instancia o sistema de persistência
+        const persistence = new DataPersistence();
+
+        // Dados iniciais (padrão)
+        const defaultTasks = [
+            {
+                id: 1,
+                nome: "Cobrança Administrativa",
+                status: "Enviado para sistematização",
+                responsaveis: "Não se aplica",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 2,
+                nome: "BNDU",
+                status: "Não recebido",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 3,
+                nome: "Fundos Garantidores",
+                status: "Recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 4,
+                nome: "BNDES Empresarial",
+                status: "Em andamento",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 5,
+                nome: "FCO Empresarial",
+                status: "Não recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 6,
+                nome: "Portabilidade Banco (Consignado Banco-Portabilidade)",
+                status: "Recebido",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 7,
+                nome: "FINEP",
+                status: "Não recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 8,
+                nome: "Garantias PF/PJ",
+                status: "Não recebido",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 9,
+                nome: "Antecipação De Recebíveis",
+                status: "Não recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 10,
+                nome: "Alçadas",
+                status: "Não recebido",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 11,
+                nome: "Consignado INSS-Banco Sicoob",
+                status: "Não recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 12,
+                nome: "CCL-Concessão Contrato Limite PF/PJ",
+                status: "Não recebido",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 13,
+                nome: "Repactuação De Crédito",
+                status: "Não recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 14,
+                nome: "Programa Desenrola Brasil",
+                status: "Não recebido",
+                responsaveis: "Karina e Karinna",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 15,
+                nome: "Integração Fábrica De Limites",
+                status: "Não recebido",
+                responsaveis: "Kamila e Leticia",
+                dataInicio: "",
+                dataFim: ""
+            },
+            {
+                id: 16,
+                nome: "Gerenciamento de RSAC",
+                status: "Não recebido",
+                responsaveis: "Não se aplica",
+                dataInicio: "",
+                dataFim: ""
+            }
+        ];
+
+        // Carrega dados salvos ou usa dados padrão
+        let tasks = persistence.getData() || defaultTasks;
+
+        const statusOptions = ["Em andamento", "Recebido", "Não recebido", "Enviado para sistematização"];
+        const responsaveisOptions = ["Não se aplica", "Karina e Karinna", "Kamila e Leticia"];
+
+        // Função para formatar datas corretamente evitando problemas de fuso horário
+        function formatDateCorrectly(dateString) {
+            if (!dateString) return 'N/A';
+            // Separa a data em ano, mês e dia
+            const [year, month, day] = dateString.split('-');
+            // Cria a data usando os componentes individuais para evitar problemas de fuso horário
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case "Em andamento": return "status-em-andamento";
+                case "Recebido": return "status-recebido";
+                case "Não recebido": return "status-nao-recebido";
+                case "Enviado para sistematização": return "status-enviado";
+                default: return "";
+            }
+        }
+
+        function saveTasksData() {
+            persistence.saveData();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const statusFilter = document.getElementById('statusFilter').value;
+            const responsavelFilter = document.getElementById('responsavelFilter').value;
+            
+            const filteredTasks = tasks.filter(task => {
+                const matchStatus = !statusFilter || task.status === statusFilter;
+                const matchResponsavel = !responsavelFilter || task.responsaveis === responsavelFilter;
+                return matchStatus && matchResponsavel;
+            });
+            
+            tbody.innerHTML = '';
+            
+            filteredTasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="nome-produto">${task.nome}</td>
+                    <td>
+                        <select onchange="updateTaskStatus(${task.id}, this.value)">
+                            ${statusOptions.map(option => 
+                                `<option value="${option}" ${task.status === option ? 'selected' : ''}>${option}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select onchange="updateTaskResponsaveis(${task.id}, this.value)">
+                            ${responsaveisOptions.map(option => 
+                                `<option value="${option}" ${task.responsaveis === option ? 'selected' : ''}>${option}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="date" value="${task.dataInicio}" onchange="updateTaskDataInicio(${task.id}, this.value)">
+                    </td>
+                    <td>
+                        <input type="date" value="${task.dataFim}" onchange="updateTaskDataFim(${task.id}, this.value)">
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            updateSummary();
+        }
+
+        function updateTaskStatus(id, newStatus) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = newStatus;
+                updateSummary();
+                saveTasksData();
+            }
+        }
+
+        function updateTaskResponsaveis(id, newResponsaveis) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.responsaveis = newResponsaveis;
+                saveTasksData();
+            }
+        }
+
+        function updateTaskDataInicio(id, newData) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.dataInicio = newData;
+                saveTasksData();
+            }
+        }
+
+        function updateTaskDataFim(id, newData) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.dataFim = newData;
+                saveTasksData();
+            }
+        }
+
+        function updateSummary() {
+            const statusCounts = {};
+            
+            tasks.forEach(task => {
+                statusCounts[task.status] = (statusCounts[task.status] || 0) + 1;
+            });
+            
+            const summaryGrid = document.getElementById('summaryGrid');
+            summaryGrid.innerHTML = '';
+            
+            const orderedStatusDisplay = ["Em andamento", "Recebido", "Não recebido", "Enviado para sistematização"];
+
+            orderedStatusDisplay.forEach(status => {
+                const count = statusCounts[status] || 0;
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.innerHTML = `
+                    <h3>${count}</h3>
+                    <p>${status}</p>
+                `;
+                summaryGrid.appendChild(card);
+            });
+            
+            const totalCard = document.createElement('div');
+            totalCard.className = 'summary-card';
+            totalCard.innerHTML = `
+                <h3>${tasks.length}</h3>
+                <p>Total de Tarefas</p>
+            `;
+            summaryGrid.appendChild(totalCard);
+        }
+
+        function exportToPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Cores corporativas
+                const COLOR_PRINCIPAL = [0, 54, 65];
+                const COLOR_SECUNDARIA = [0, 174, 157];
+                const COLOR_CINZA = [102, 102, 102];
+                const COLOR_CINZA_CLARO = [245, 245, 245];
+
+                // Data de geração do relatório
+                const today = new Date();
+                const day = String(today.getDate()).padStart(2, '0');
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const year = today.getFullYear();
+                const formattedDate = `${day}/${month}/${year}`;
+
+                // Configuração de página
+                const pageWidth = doc.internal.pageSize.width;
+                const pageHeight = doc.internal.pageSize.height;
+                const margin = 15;
+                let currentY = margin;
+
+                // Cabeçalho do relatório
+                doc.setFillColor(COLOR_PRINCIPAL[0], COLOR_PRINCIPAL[1], COLOR_PRINCIPAL[2]);
+                doc.rect(0, 0, pageWidth, 30, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(18);
+                doc.setFont('helvetica', 'bold');
+                doc.text('RELATÓRIO DE ACOMPANHAMENTO', pageWidth / 2, 15, { align: 'center' });
+                doc.setFontSize(14);
+                doc.text('Produto Crédito', pageWidth / 2, 22, { align: 'center' });
+
+                currentY = 45;
+
+                // Informações do relatório
+                doc.setTextColor(COLOR_CINZA[0], COLOR_CINZA[1], COLOR_CINZA[2]);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Data de Geração: ${formattedDate}`, margin, currentY);
+                doc.text(`Total de Produtos: ${tasks.length}`, pageWidth - margin, currentY, { align: 'right' });
+                
+                currentY += 15;
+
+                // Linha separadora
+                doc.setDrawColor(COLOR_CINZA[0], COLOR_CINZA[1], COLOR_CINZA[2]);
+                doc.setLineWidth(0.5);
+                doc.line(margin, currentY, pageWidth - margin, currentY);
+                
+                currentY += 10;
+
+                // Resumo executivo
+                doc.setTextColor(COLOR_PRINCIPAL[0], COLOR_PRINCIPAL[1], COLOR_PRINCIPAL[2]);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('RESUMO EXECUTIVO', margin, currentY);
+                
+                currentY += 8;
+
+                // Contadores por status
+                const statusCounts = {};
+                tasks.forEach(task => {
+                    statusCounts[task.status] = (statusCounts[task.status] || 0) + 1;
+                });
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(COLOR_CINZA[0], COLOR_CINZA[1], COLOR_CINZA[2]);
+
+                const statusOrder = ["Em andamento", "Recebido", "Não recebido", "Enviado para sistematização"];
+                statusOrder.forEach(status => {
+                    const count = statusCounts[status] || 0;
+                    const percentage = ((count / tasks.length) * 100).toFixed(1);
+                    doc.text(`• ${status}: ${count} produtos (${percentage}%)`, margin + 5, currentY);
+                    currentY += 5;
+                });
+
+                currentY += 10;
+
+                // Linha separadora
+                doc.line(margin, currentY, pageWidth - margin, currentY);
+                currentY += 10;
+
+                // Título da tabela
+                doc.setTextColor(COLOR_PRINCIPAL[0], COLOR_PRINCIPAL[1], COLOR_PRINCIPAL[2]);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('DETALHAMENTO POR PRODUTO', margin, currentY);
+                
+                currentY += 10;
+
+                // Cabeçalho da tabela
+                const colWidths = [65, 35, 45, 25, 25];
+                const colPositions = [margin, margin + colWidths[0], margin + colWidths[0] + colWidths[1], 
+                                   margin + colWidths[0] + colWidths[1] + colWidths[2], 
+                                   margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3]];
+                
+                const tableHeaders = ['Nome do Produto', 'Status', 'Responsáveis', 'Data Início', 'Data Fim'];
+                
+                // Fundo do cabeçalho
+                doc.setFillColor(COLOR_CINZA_CLARO[0], COLOR_CINZA_CLARO[1], COLOR_CINZA_CLARO[2]);
+                doc.rect(margin, currentY - 3, pageWidth - (margin * 2), 8, 'F');
+                
+                doc.setTextColor(COLOR_PRINCIPAL[0], COLOR_PRINCIPAL[1], COLOR_PRINCIPAL[2]);
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'bold');
+                
+                tableHeaders.forEach((header, index) => {
+                    doc.text(header, colPositions[index], currentY + 2);
+                });
+                
+                currentY += 8;
+
+                // Linha do cabeçalho
+                doc.setDrawColor(COLOR_CINZA[0], COLOR_CINZA[1], COLOR_CINZA[2]);
+                doc.line(margin, currentY, pageWidth - margin, currentY);
+                currentY += 5;
+
+                // Dados da tabela
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+
+                tasks.forEach((task, index) => {
+                    // Verificar se precisa de nova página
+                    if (currentY > pageHeight - 30) {
+                        doc.addPage();
+                        currentY = margin;
+                        
+                        // Repetir cabeçalho na nova página
+                        doc.setFillColor(COLOR_CINZA_CLARO[0], COLOR_CINZA_CLARO[1], COLOR_CINZA_CLARO[2]);
+                        doc.rect(margin, currentY - 3, pageWidth - (margin * 2), 8, 'F');
+                        
+                        doc.setTextColor(COLOR_PRINCIPAL[0], COLOR_PRINCIPAL[1], COLOR_PRINCIPAL[2]);
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'bold');
+                        
+                        tableHeaders.forEach((header, index) => {
+                            doc.text(header, colPositions[index], currentY + 2);
+                        });
+                        
+                        currentY += 8;
+                        doc.line(margin, currentY, pageWidth - margin, currentY);
+                        currentY += 5;
+                        
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(0, 0, 0);
+                    }
+
+                    // Linha zebrada
+                    if (index % 2 === 0) {
+                        doc.setFillColor(250, 250, 250);
+                        doc.rect(margin, currentY - 3, pageWidth - (margin * 2), 8, 'F');
+                    }
+
+                    // Dados da linha - USANDO A FUNÇÃO CORRIGIDA
+                    const nomeTexto = doc.splitTextToSize(task.nome, colWidths[0] - 2);
+                    const statusTexto = doc.splitTextToSize(task.status, colWidths[1] - 2);
+                    const responsaveisTexto = doc.splitTextToSize(task.responsaveis, colWidths[2] - 2);
+                    const dataInicioTexto = formatDateCorrectly(task.dataInicio);
+                    const dataFimTexto = formatDateCorrectly(task.dataFim);
+
+                    const maxLines = Math.max(nomeTexto.length, statusTexto.length, responsaveisTexto.length);
+
+                    for (let i = 0; i < maxLines; i++) {
+                        const lineY = currentY + (i * 4);
+                        
+                        if (nomeTexto[i]) doc.text(nomeTexto[i], colPositions[0], lineY);
+                        if (statusTexto[i]) doc.text(statusTexto[i], colPositions[1], lineY);
+                        if (responsaveisTexto[i]) doc.text(responsaveisTexto[i], colPositions[2], lineY);
+                        if (i === 0) {
+                            doc.text(dataInicioTexto, colPositions[3], lineY);
+                            doc.text(dataFimTexto, colPositions[4], lineY);
+                        }
+                    }
+
+                    currentY += Math.max(maxLines * 4, 8);
+                });
+
+                // Rodapé
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(COLOR_CINZA[0], COLOR_CINZA[1], COLOR_CINZA[2]);
+                    doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+                    doc.text('Relatório Confidencial - Uso Interno', margin, pageHeight - 10);
+                }
+
+                // Salvar o PDF
+                doc.save(`relatorio_produto_credito_${formattedDate.replace(/\//g, '_')}.pdf`);
+
+            } catch (error) {
+                console.error('Erro ao gerar o PDF:', error);
+                alert('Erro ao gerar o PDF. Verifique o console do navegador para mais detalhes.');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('statusFilter').addEventListener('change', renderTable);
+        document.getElementById('responsavelFilter').addEventListener('change', renderTable);
+
+        // Inicializar a tabela
+        renderTable();
+
+        // Salva os dados ao carregar a página pela primeira vez
+        saveTasksData();
+    </script>
+</body>
+</html>
